@@ -1,45 +1,26 @@
-pipeline {
-  agent any
+node {
+    // Clean workspace before starting the build
+    deleteDir()
 
-  tools {
-    nodejs 'NodeJs'
-  }
-
-  environment {
-    PATH = "${tool 'NodeJs'}/bin:${env.PATH}"
-  }
-
-  stages {
     stage('Checkout') {
-      steps {
-        git 'https://github.com/IsmailAISSAMI/pelico-tech-test.git'
-      }
+        // Checkout the Git repository
+        git 'https://github.com/IsmailAISSAMI/pelico-tech-test'
     }
 
-    stage('Install Dependencies and Build') {
-      steps {
-        sh 'npm ci'
+    stage('Install Dependencies') {
+        // Install npm dependencies
+        sh 'npm install'
+    }
+
+    stage('Build') {
+        // Build the React application
         sh 'npm run build'
-      }
     }
 
-    stage('Build Docker Image') {
-      steps {
-        script {
-          def project = 'pelico-tech-test'
-          def version = 'latest'
-          def imageName = "${project}:${version}"
-          sh "docker build -t ${imageName} ."
-        }
-      }
+    stage('Test') {
+        // Run tests using the npm test command
+        sh 'npm test'
     }
 
-    stage('Deploy to Minikube') {
-      steps {
-        sh 'kubectl config use-context minikube'
-        sh 'kubectl apply -f k8s-deployment.yml'
-        sh 'kubectl apply -f k8s-service.yml'
-      }
-    }
-  }
+    // Optional: you can add more stages for deployment, notifications, etc.
 }
