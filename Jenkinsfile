@@ -1,25 +1,61 @@
-node {
-    // Clean workspace before starting the build
-    deleteDir()
-
-    stage('Checkout') {
-        git branch: 'main', url: 'https://github.com/IsmailAISSAMI/pelico-tech-test'
+pipeline {
+    environment {
+        registry = "shtorm77/pelico-tech-app"
+        registryCredential = 'dockerhub'
+        dockerImage = ''
     }
 
-    stage('Install Dependencies') {
-        sh 'npm install'
-    }
+    agent any
 
-    stage('Build') {
-        sh 'npm run build'
-    }
+    stages {
+        stage('Git checkout') {
+            steps {
+                checkout scm
+            }
+        }
 
-    stage('Test') {
-        sh 'npm test'
-    }
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
 
-    stage('Deploy') {
-        sh 'serve -s build'
+        stage('Build') {
+            steps {
+                sh 'npm run build'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'npm test'
+            }
+        }
+
+        stage('Building image') {
+            steps {
+                script {
+                    dockerImage = docker.build registry + ":$BUILD_NUMBER"
+                }
+            }
+        }
+
+        stage('Publish Image') {
+            steps {
+                script {
+                    docker.withRegistry('', registryCredential) {
+                        dockerImage.push()
+                        dockerImage.push("latest")
+                    }
+                    echo "Trying to push Docker Build to DockerHub"
+                }
+            }
+        }
+
+        stage('Remove Unused docker image') {
+            steps {
+                sh "docker rmi $registry:$BUILD_NUMBER"
+            }
+        }
     }
 }
-
